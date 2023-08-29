@@ -1,0 +1,75 @@
+version: '3'
+
+services:
+    #PHP Service
+    app:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        image: arm64v8/php:8.2-fpm
+        container_name: app-petshop
+        restart: unless-stopped
+        tty: true
+        environment:
+            SERVICE_NAME: app-petshop
+            SERVICE_TAGS: dev
+        working_dir: /var/www
+        volumes:
+            - ./:/var/www
+            - ./php/local.ini:/usr/local/etc/php/conf.d/local.ini
+        networks:
+            - petshop-network
+
+    #Nginx Service
+    webserver:
+        image: nginx:alpine
+        container_name: webserver-petshop
+        restart: unless-stopped
+        tty: true
+        ports:
+            - "90:80"
+            - "443:443"
+        volumes:
+            - ./:/var/www
+            - ./nginx/conf.d/:/etc/nginx/conf.d/
+        networks:
+            - petshop-network
+
+    #MySQL Service
+    db:
+        image: mysql
+        container_name: db-petshop
+        restart: unless-stopped
+        tty: true
+        ports:
+            - "3306:3306"
+        environment:
+            MYSQL_DATABASE: db-petshop
+            MYSQL_USER: petshop
+            MYSQL_PASSWORD: secret
+            MYSQL_ROOT_PASSWORD: secret
+            SERVICE_TAGS: dev
+            SERVICE_NAME: mysql
+        volumes:
+            - dbdata:/var/lib/mysql/
+        networks:
+            - petshop-network
+
+
+    # Mailhog
+    mailhog:
+        image: mailhog/mailhog
+        ports:
+            - "8025:8025"
+        networks:
+            - petshop-network
+
+#Docker Networks
+networks:
+    petshop-network:
+        driver: bridge
+
+#Volumes
+volumes:
+    dbdata:
+        driver: local
